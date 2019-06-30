@@ -48,11 +48,11 @@ class top_block(gr.top_block):
         # Variables
         ##################################################
         self.samp_rate = samp_rate = options.sample_rate
-        self.offset = offset = 900000
+        self.offset = offset = 200000
         self.freq = freq = options.frequency
         self.decim = decim = samp_rate // 200000
 
-        self.taps1 = taps1 = firdes.low_pass(1.0, samp_rate, 100000, 15000, firdes.WIN_HAMMING, 6.76)
+        self.taps1 = taps1 = firdes.low_pass(10.0, samp_rate, 100000, 15000, firdes.WIN_HAMMING, 6.76)
 
         self.rf_amp = rf_amp = 14
         self.rate = rate = samp_rate / decim
@@ -86,19 +86,29 @@ class top_block(gr.top_block):
         ##################################################
         # Blocks
         ##################################################
-        self.src = osmosdr.source( args="numchan=" + str(1) + " " + '' )
+        self.src = osmosdr.source( args="numchan=" + str(1) + " " + 'driver=sdrplay,soapy=1,verbose=1' )
         self.src.set_sample_rate(samp_rate)
         self.src.set_center_freq(center_freq, 0)
         self.src.set_freq_corr(0, 0)
         self.src.set_dc_offset_mode(0, 0)
         self.src.set_iq_balance_mode(0, 0)
         self.src.set_gain_mode(False, 0)
-        self.src.set_gain(rf_amp, 0)
-        self.src.set_if_gain(if_amp, 0)
-        self.src.set_bb_gain(bb_amp, 0)
-        self.src.set_antenna('', 0)
-        self.src.set_bandwidth(0, 0)
+        #self.src.set_gain(rf_amp, 0)
+        #self.src.set_if_gain(if_amp, 0)
+        #self.src.set_bb_gain(bb_amp, 0)
+        #self.src.set_antenna('', 0)
+        #self.src.set_bandwidth(0, 0)
 
+        gain_names = self.src.get_gain_names()
+        for name in gain_names:
+            range = self.src.get_gain_range(name)
+            print "%s gain range: start %d stop %d step %d" % (name, range.start(), range.stop(), range.step())
+
+        self.src.set_gain(30, 'IFGR')
+        self.src.set_gain(0, 'RFGR')
+
+        for name in gain_names:
+            print "%s Gain set to: %d" % (name, self.src.get_gain(name))
 
         if iq_file is not None:
             self.iq_sink = blocks.file_sink(gr.sizeof_gr_complex*1, iq_file, False)
